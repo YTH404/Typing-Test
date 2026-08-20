@@ -1,0 +1,260 @@
+{
+  "checks": [
+    {
+      "id": "primary-text-on-background",
+      "foreground": "#CBD5E1",
+      "background": "#0F172A",
+      "type": "text-normal",
+      "state": "default",
+      "notes": "Primary body and typing text on the page background"
+    },
+    {
+      "id": "primary-text-on-surface",
+      "foreground": "#CBD5E1",
+      "background": "#1E293B",
+      "type": "text-normal",
+      "state": "default",
+      "notes": "Primary labels and results text on raised surfaces"
+    },
+    {
+      "id": "muted-text-on-background",
+      "foreground": "#94A3B8",
+      "background": "#0F172A",
+      "type": "text-normal",
+      "state": "default",
+      "notes": "Secondary copy, metadata, and untyped characters on the page background"
+    },
+    {
+      "id": "muted-text-on-surface",
+      "foreground": "#94A3B8",
+      "background": "#1E293B",
+      "type": "text-normal",
+      "state": "default",
+      "notes": "Secondary labels and metadata on raised surfaces"
+    },
+    {
+      "id": "accent-text-on-background",
+      "foreground": "#5EEAD4",
+      "background": "#0F172A",
+      "type": "text-normal",
+      "state": "active",
+      "notes": "Active text, links, and selected text labels on the page background"
+    },
+    {
+      "id": "accent-text-on-surface",
+      "foreground": "#5EEAD4",
+      "background": "#1E293B",
+      "type": "text-normal",
+      "state": "active",
+      "notes": "Active text, links, and selected text labels on raised surfaces"
+    },
+    {
+      "id": "error-text-on-background",
+      "foreground": "#FB7185",
+      "background": "#0F172A",
+      "type": "text-normal",
+      "state": "error",
+      "notes": "Typing errors and validation messages on the page background"
+    },
+    {
+      "id": "error-text-on-surface",
+      "foreground": "#FB7185",
+      "background": "#1E293B",
+      "type": "text-normal",
+      "state": "error",
+      "notes": "Typing errors and validation messages on raised surfaces"
+    },
+    {
+      "id": "inverse-text-on-accent-fill",
+      "foreground": "#0F172A",
+      "background": "#5EEAD4",
+      "type": "text-normal",
+      "state": "selected",
+      "notes": "Dark label required on an accent-filled selected control"
+    },
+    {
+      "id": "inverse-text-on-error-fill",
+      "foreground": "#0F172A",
+      "background": "#FB7185",
+      "type": "text-normal",
+      "state": "error",
+      "notes": "Dark label required on an error-filled control or badge"
+    },
+    {
+      "id": "control-border-on-background",
+      "foreground": "#64748B",
+      "background": "#0F172A",
+      "type": "ui",
+      "state": "default",
+      "notes": "Control and panel boundary where the adjacent colour is the page background"
+    },
+    {
+      "id": "control-border-on-surface",
+      "foreground": "#64748B",
+      "background": "#1E293B",
+      "type": "ui",
+      "state": "default",
+      "notes": "Control boundary where the adjacent colour is a raised surface"
+    },
+    {
+      "id": "focus-ring-on-background",
+      "foreground": "#5EEAD4",
+      "background": "#0F172A",
+      "type": "ui",
+      "state": "focus",
+      "notes": "Two-pixel focus-visible outline against the page background"
+    },
+    {
+      "id": "focus-ring-on-surface",
+      "foreground": "#5EEAD4",
+      "background": "#1E293B",
+      "type": "ui",
+      "state": "focus",
+      "notes": "Two-pixel focus-visible outline against a raised surface"
+    },
+    {
+      "id": "typing-caret-on-background",
+      "foreground": "#FBBF24",
+      "background": "#0F172A",
+      "type": "ui",
+      "state": "active",
+      "notes": "Typing caret when rendered directly on the page background"
+    },
+    {
+      "id": "typing-caret-on-surface",
+      "foreground": "#FBBF24",
+      "background": "#1E293B",
+      "type": "ui",
+      "state": "active",
+      "notes": "Typing caret when rendered inside the typing surface"
+    },
+    {
+      "id": "primary-icon-on-background",
+      "foreground": "#CBD5E1",
+      "background": "#0F172A",
+      "type": "graphic",
+      "state": "default",
+      "notes": "Meaningful primary icon on the page background"
+    },
+    {
+      "id": "primary-icon-on-surface",
+      "foreground": "#CBD5E1",
+      "background": "#1E293B",
+      "type": "graphic",
+      "state": "default",
+      "notes": "Meaningful primary icon on a raised surface"
+    },
+    {
+      "id": "muted-icon-on-background",
+      "foreground": "#94A3B8",
+      "background": "#0F172A",
+      "type": "graphic",
+      "state": "default",
+      "notes": "Secondary but meaningful icon on the page background"
+    },
+    {
+      "id": "muted-icon-on-surface",
+      "foreground": "#94A3B8",
+      "background": "#1E293B",
+      "type": "graphic",
+      "state": "default",
+      "notes": "Secondary but meaningful icon on a raised surface"
+    },
+    {
+      "id": "accent-icon-on-background",
+      "foreground": "#5EEAD4",
+      "background": "#0F172A",
+      "type": "graphic",
+      "state": "active",
+      "notes": "Selected or active icon on the page background"
+    },
+    {
+      "id": "accent-icon-on-surface",
+      "foreground": "#5EEAD4",
+      "background": "#1E293B",
+      "type": "graphic",
+      "state": "active",
+      "notes": "Selected or active icon on a raised surface"
+    },
+    {
+      "id": "error-icon-on-background",
+      "foreground": "#FB7185",
+      "background": "#0F172A",
+      "type": "graphic",
+      "state": "error",
+      "notes": "Meaningful error icon on the page background"
+    },
+    {
+      "id": "error-icon-on-surface",
+      "foreground": "#FB7185",
+      "background": "#1E293B",
+      "type": "graphic",
+      "state": "error",
+      "notes": "Meaningful error icon on a raised surface"
+    },
+    {
+      "id": "chart-axis-on-background",
+      "foreground": "#64748B",
+      "background": "#0F172A",
+      "type": "graphic",
+      "state": "default",
+      "notes": "Meaningful chart axis, grid line, or marker on the page background"
+    },
+    {
+      "id": "chart-axis-on-surface",
+      "foreground": "#64748B",
+      "background": "#1E293B",
+      "type": "graphic",
+      "state": "default",
+      "notes": "Meaningful chart axis, grid line, or marker on a raised surface"
+    },
+    {
+      "id": "accent-chart-line-on-background",
+      "foreground": "#5EEAD4",
+      "background": "#0F172A",
+      "type": "graphic",
+      "state": "default",
+      "notes": "Primary chart series on the page background; also distinguish it with labels or markers"
+    },
+    {
+      "id": "accent-chart-line-on-surface",
+      "foreground": "#5EEAD4",
+      "background": "#1E293B",
+      "type": "graphic",
+      "state": "default",
+      "notes": "Primary chart series on a raised surface; also distinguish it with labels or markers"
+    },
+    {
+      "id": "error-chart-line-on-background",
+      "foreground": "#FB7185",
+      "background": "#0F172A",
+      "type": "graphic",
+      "state": "error",
+      "notes": "Error or incorrect-character chart series on the page background"
+    },
+    {
+      "id": "error-chart-line-on-surface",
+      "foreground": "#FB7185",
+      "background": "#1E293B",
+      "type": "graphic",
+      "state": "error",
+      "notes": "Error or incorrect-character chart series on a raised surface"
+    },
+    {
+      "id": "caret-chart-line-on-background",
+      "foreground": "#FBBF24",
+      "background": "#0F172A",
+      "type": "graphic",
+      "state": "default",
+      "notes": "Secondary chart series or current-position marker on the page background"
+    },
+    {
+      "id": "caret-chart-line-on-surface",
+      "foreground": "#FBBF24",
+      "background": "#1E293B",
+      "type": "graphic",
+      "state": "default",
+      "notes": "Secondary chart series or current-position marker on a raised surface"
+    }
+  ]
+}

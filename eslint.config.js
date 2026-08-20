@@ -104,6 +104,7 @@ export default [
     },
     {
         ignores: [
+            '.agents/**',
             'vendor',
             'node_modules',
             'public',
