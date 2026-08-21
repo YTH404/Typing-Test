@@ -49,6 +49,11 @@ const timelessSettings = (
     mode: { kind: 'timeless' },
 });
 
+const modeCases: readonly (readonly [string, TestSettings])[] = [
+    ['timed', DEFAULT_SETTINGS],
+    ['timeless', timelessSettings()],
+];
+
 describe('typing reducer', () => {
     it('uses the agreed QWERTY 60-second defaults', () => {
         expect(DEFAULT_SETTINGS).toEqual({
@@ -95,6 +100,91 @@ describe('typing reducer', () => {
         });
     });
 
+    it.each(modeCases)(
+        'ignores empty Space spam before start and after one commit in %s mode',
+        (_label, settings) => {
+            let state = createInitialState(settings, 31);
+
+            for (let press = 0; press < 5; press += 1) {
+                state = key(state, KEYBOARD_TOKENS.space, press);
+            }
+
+            expect(state.phase).toBe('ready');
+            expect(state.activeWordIndex).toBe(0);
+            expect(state.history).toEqual([]);
+
+            state = key(state, character('a'), 10);
+            state = key(state, KEYBOARD_TOKENS.space, 20);
+            const committedAttempt = state.attempts[0];
+            const committedHistory = state.history;
+
+            for (let press = 0; press < 5; press += 1) {
+                state = key(state, KEYBOARD_TOKENS.space, 21 + press);
+            }
+
+            expect(state.phase).toBe('running');
+            expect(state.activeWordIndex).toBe(1);
+            expect(getActiveAttempt(state)!.typed).toBe('');
+            expect(state.attempts[0]).toBe(committedAttempt);
+            expect(state.history).toBe(committedHistory);
+            expect(
+                state.history.filter((entry) => entry.actual === ' '),
+            ).toHaveLength(1);
+        },
+    );
+
+    it.each(modeCases)(
+        'commits three non-empty attempts and leaves the fourth word active in %s mode',
+        (_label, settings) => {
+            let state = createInitialState(settings, 32);
+
+            for (let word = 0; word < 3; word += 1) {
+                state = key(state, character('a'), word * 10);
+                state = key(state, KEYBOARD_TOKENS.space, word * 10 + 1);
+            }
+
+            expect(state.phase).toBe('running');
+            expect(state.activeWordIndex).toBe(3);
+            expect(getActiveAttempt(state)!.typed).toBe('');
+            expect(
+                state.attempts
+                    .slice(0, 3)
+                    .map(({ committed, typed }) => ({ committed, typed })),
+            ).toEqual([
+                { committed: true, typed: 'a' },
+                { committed: true, typed: 'a' },
+                { committed: true, typed: 'a' },
+            ]);
+            expect(
+                state.history.filter((entry) => entry.actual === ' '),
+            ).toHaveLength(3);
+        },
+    );
+
+    it.each(modeCases)(
+        'does not commit after the current character is erased in %s mode',
+        (_label, settings) => {
+            let state = createInitialState(settings, 33);
+
+            state = key(state, character('a'), 10);
+            state = key(state, KEYBOARD_TOKENS.backspace, 20);
+
+            for (let press = 0; press < 5; press += 1) {
+                state = key(state, KEYBOARD_TOKENS.space, 30 + press);
+            }
+
+            expect(state.phase).toBe('running');
+            expect(state.activeWordIndex).toBe(0);
+            expect(getActiveAttempt(state)).toMatchObject({
+                committed: false,
+                typed: '',
+            });
+            expect(
+                state.history.filter((entry) => entry.actual === ' '),
+            ).toHaveLength(0);
+        },
+    );
+
     it('tracks substitutions and extra characters in append-only history', () => {
         let state = createInitialState(timelessSettings(), 2);
         const target = getActiveAttempt(state)!.target;
@@ -136,38 +226,140 @@ describe('typing reducer', () => {
         expect(state).toBe(committed);
     });
 
-    it('reopens the prior word and deletes its final character with cross-word Backspace', () => {
+    it('irreversibly commits a mistaken partial word on Space', () => {
+        let state = createInitialState(timelessSettings(), 34);
+        const target = getActiveAttempt(state)!.target;
+        const wrong = target[0] === 'x' ? 'y' : 'x';
+
+        state = key(state, character(wrong), 0);
+        state = key(state, KEYBOARD_TOKENS.space, 100);
+        const committedAttempt = state.attempts[0];
+        state = key(state, KEYBOARD_TOKENS.backspace, 200);
+
+        expect(state.activeWordIndex).toBe(1);
+        expect(state.attempts[0]).toBe(committedAttempt);
+        expect(state.attempts[0]).toMatchObject({
+            committed: true,
+            typed: wrong,
+        });
+        expect(
+            state.history.filter((entry) => entry.outcome === 'incorrect'),
+        ).toHaveLength(1);
+        expect(
+            state.history.filter((entry) => entry.outcome === 'missed'),
+        ).toHaveLength(target.length - 1);
+    });
+
+    it('accepts repeated discrete printable keys but ignores Space spam at the resulting boundary', () => {
+        let state = createInitialState(timelessSettings(), 35);
+
+        state = typeText(state, 'aaa', 0);
+        state = key(state, KEYBOARD_TOKENS.space, 10);
+
+        for (let press = 0; press < 5; press += 1) {
+            state = key(state, KEYBOARD_TOKENS.space, 20 + press);
+        }
+
+        expect(state.activeWordIndex).toBe(1);
+        expect(state.attempts[0]).toMatchObject({
+            committed: true,
+            typed: 'aaa',
+        });
+        expect(
+            state.history.filter((entry) => entry.actual === 'a'),
+        ).toHaveLength(3);
+        expect(
+            state.history.filter((entry) => entry.actual === ' '),
+        ).toHaveLength(1);
+    });
+
+    it('uses the same immutable Space boundary for capitalized and punctuated targets', () => {
+        let state = createInitialState(
+            timelessSettings({ punctuation: true, capitals: true }),
+            36,
+        );
+        const committedTargets: string[] = [];
+
+        expect(getActiveAttempt(state)!.target).toMatch(/^[A-Z]/);
+
+        while (
+            committedTargets.length < 12 &&
+            !committedTargets.some((target) => /[.!?]$/.test(target))
+        ) {
+            const target = getActiveAttempt(state)!.target;
+            state = typeText(state, target, committedTargets.length * 10);
+            state = key(
+                state,
+                KEYBOARD_TOKENS.space,
+                committedTargets.length * 10 + 1,
+            );
+            committedTargets.push(target);
+        }
+
+        expect(committedTargets.some((target) => /[.!?]$/.test(target))).toBe(
+            true,
+        );
+        const lastCommittedIndex = state.activeWordIndex - 1;
+        const lastCommitted = state.attempts[lastCommittedIndex];
+
+        state = key(state, KEYBOARD_TOKENS.backspace, 500);
+
+        expect(state.activeWordIndex).toBe(committedTargets.length);
+        expect(state.attempts[lastCommittedIndex]).toBe(lastCommitted);
+        expect(lastCommitted).toMatchObject({ committed: true });
+    });
+
+    it('keeps a committed word immutable when Backspace is pressed at the next boundary', () => {
         let state = createInitialState(timelessSettings(), 4);
         const target = getActiveAttempt(state)!.target;
 
         state = typeText(state, target, 0);
         state = key(state, KEYBOARD_TOKENS.space, 100);
-        const immutableCommittedState = state;
+        const committedAttempt = state.attempts[0];
         const history = state.history;
 
-        state = key(state, KEYBOARD_TOKENS.backspace, 200);
+        for (let press = 0; press < 12; press += 1) {
+            state = key(state, KEYBOARD_TOKENS.backspace, 200 + press);
+        }
 
-        expect(state.activeWordIndex).toBe(0);
-        expect(getActiveAttempt(state)).toMatchObject({
-            committed: false,
-            typed: target.slice(0, -1),
-        });
+        expect(state.activeWordIndex).toBe(1);
+        expect(getActiveAttempt(state)!.typed).toBe('');
         expect(state.history).toBe(history);
-        expect(immutableCommittedState.attempts[0]).toMatchObject({
+        expect(state.attempts[0]).toBe(committedAttempt);
+        expect(state.attempts[0]).toMatchObject({
             committed: true,
             typed: target,
         });
-
-        state = key(state, character(target.at(-1)!), 300);
-        state = key(state, KEYBOARD_TOKENS.space, 400);
-
-        expect(state.activeWordIndex).toBe(1);
-        expect(
-            state.history.filter((entry) => entry.actual === ' '),
-        ).toHaveLength(2);
     });
 
-    it('never erases historical incorrect or missed penalties after correction', () => {
+    it('deletes the current word to empty and stops before the committed word', () => {
+        let state = createInitialState(timelessSettings(), 40);
+        const firstTarget = getActiveAttempt(state)!.target;
+
+        state = typeText(state, firstTarget, 0);
+        state = key(state, KEYBOARD_TOKENS.space, 100);
+        const committedAttempt = state.attempts[0];
+        state = typeText(state, 'xyz', 200);
+
+        state = key(state, KEYBOARD_TOKENS.backspace, 300);
+        state = key(state, KEYBOARD_TOKENS.backspace, 301);
+        state = key(state, KEYBOARD_TOKENS.backspace, 302);
+
+        expect(state.activeWordIndex).toBe(1);
+        expect(getActiveAttempt(state)!.typed).toBe('');
+
+        const emptyBoundary = state;
+        state = key(state, KEYBOARD_TOKENS.backspace, 303);
+
+        expect(state).toBe(emptyBoundary);
+        expect(state.attempts[0]).toBe(committedAttempt);
+        expect(state.attempts[0]).toMatchObject({
+            committed: true,
+            typed: firstTarget,
+        });
+    });
+
+    it('never erases historical incorrect or commit-time missed penalties', () => {
         let state = createInitialState(timelessSettings(), 5);
         const target = getActiveAttempt(state)!.target;
         const expected = target[0]!;
@@ -180,15 +372,20 @@ describe('typing reducer', () => {
         expect(getMetrics(state, 1_000).incorrect).toBe(1);
 
         state = key(state, KEYBOARD_TOKENS.space, 30);
+        const committedAttempt = state.attempts[0];
         const originallyMissed = getMetrics(state, 30).missed;
-        state = key(state, KEYBOARD_TOKENS.backspace, 40);
-        state = typeText(state, target, 50);
-        state = key(state, KEYBOARD_TOKENS.space, 60);
+
+        for (let press = 0; press < 4; press += 1) {
+            state = key(state, KEYBOARD_TOKENS.backspace, 40 + press);
+        }
 
         const result = getMetrics(state, 1_000);
         expect(originallyMissed).toBe(target.length - 1);
         expect(result.incorrect).toBe(1);
         expect(result.missed).toBe(originallyMissed);
+        expect(result.completedWords).toBe(1);
+        expect(state.activeWordIndex).toBe(1);
+        expect(state.attempts[0]).toBe(committedAttempt);
     });
 
     it('locks settings while running and applies them in ready or finished phases', () => {
@@ -360,5 +557,26 @@ describe('typing reducer', () => {
         expect(
             window.some((entry) => entry.index === state.activeWordIndex),
         ).toBe(true);
+
+        const currentWordOffset = state.wordOffset;
+        const localActiveIndex = state.activeWordIndex - state.wordOffset;
+        const mostRecentCommitted = state.attempts[localActiveIndex - 1];
+
+        for (let press = 0; press < 5; press += 1) {
+            state = key(state, KEYBOARD_TOKENS.space, 650 + press);
+        }
+
+        expect(state.activeWordIndex).toBe(320);
+        expect(state.wordOffset).toBe(currentWordOffset);
+
+        for (let press = 0; press < 12; press += 1) {
+            state = key(state, KEYBOARD_TOKENS.backspace, 700 + press);
+        }
+
+        expect(state.activeWordIndex).toBe(320);
+        expect(state.wordOffset).toBe(currentWordOffset);
+        expect(getActiveAttempt(state)!.typed).toBe('');
+        expect(state.attempts[localActiveIndex - 1]).toBe(mostRecentCommitted);
+        expect(mostRecentCommitted).toMatchObject({ committed: true });
     });
 });

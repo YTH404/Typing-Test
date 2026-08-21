@@ -33,6 +33,27 @@ const getApp = (container: HTMLElement): HTMLElement => {
 const getTypingInput = () =>
     screen.getByRole('textbox', { name: 'Typing input' });
 
+const getPassageWord = (index: number): HTMLElement => {
+    const word = screen
+        .getByTestId('typing-passage')
+        .querySelector<HTMLElement>(`.typing-word[data-word-index="${index}"]`);
+
+    expect(word).not.toBeNull();
+
+    return word!;
+};
+
+const typeQwertyText = (text: string) => {
+    const input = getTypingInput();
+
+    for (const value of text) {
+        fireEvent.keyDown(input, {
+            code: `Key${value.toUpperCase()}`,
+            key: value,
+        });
+    }
+};
+
 const getLetterRowLabels = (): string[] => {
     const keyboard = screen.getByTestId('virtual-keyboard');
     const letterRow = keyboard.querySelectorAll('.keyboard-row')[1];
@@ -197,6 +218,51 @@ describe('TypingTestApp', () => {
         fireEvent.mouseDown(screen.getByTestId('typing-passage'));
 
         expect(input).toHaveFocus();
+    });
+
+    it('keeps a Space-committed word locked through empty spaces and Backspace', () => {
+        renderApp();
+        const input = getTypingInput();
+        const firstWord = getPassageWord(0);
+        const secondWord = getPassageWord(1);
+        const firstTarget = firstWord.textContent ?? '';
+        const secondTarget = secondWord.textContent ?? '';
+
+        typeQwertyText(firstTarget);
+        fireEvent.keyDown(input, { code: 'Space', key: ' ' });
+
+        expect(getPassageWord(0)).toBe(firstWord);
+        expect(getPassageWord(0)).not.toHaveAttribute('data-active');
+        expect(getPassageWord(1)).toBe(secondWord);
+        expect(getPassageWord(1)).toHaveAttribute('data-active', 'true');
+
+        for (let press = 0; press < 3; press += 1) {
+            fireEvent.keyDown(input, { code: 'Space', key: ' ' });
+            fireEvent.keyDown(input, {
+                code: 'Backspace',
+                key: 'Backspace',
+                repeat: press > 0,
+            });
+        }
+
+        expect(getPassageWord(0)).toBe(firstWord);
+        expect(getPassageWord(0)).toHaveTextContent(firstTarget);
+        expect(getPassageWord(1)).toBe(secondWord);
+        expect(getPassageWord(1)).toHaveTextContent(secondTarget);
+        expect(getPassageWord(1)).toHaveAttribute('data-active', 'true');
+
+        typeQwertyText(secondTarget[0]!);
+        fireEvent.keyDown(input, { code: 'Backspace', key: 'Backspace' });
+        fireEvent.keyDown(input, {
+            code: 'Backspace',
+            key: 'Backspace',
+            repeat: true,
+        });
+
+        expect(getPassageWord(0)).toBe(firstWord);
+        expect(getPassageWord(0)).toHaveTextContent(firstTarget);
+        expect(getPassageWord(1)).toBe(secondWord);
+        expect(getPassageWord(1)).toHaveAttribute('data-active', 'true');
     });
 
     it('ignores shortcuts, composition, repeats, and paste while ready', () => {

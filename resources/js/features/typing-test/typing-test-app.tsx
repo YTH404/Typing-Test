@@ -206,8 +206,6 @@ export function TypingTestApp() {
         });
     };
 
-    const localActiveWordIndex = state.activeWordIndex - state.wordOffset;
-
     return (
         <div className="typing-app" data-phase={state.phase}>
             <a className="typing-skip-link" href="#typing-main">
@@ -257,7 +255,8 @@ export function TypingTestApp() {
 
                                     <TypingPassage
                                         attempts={state.attempts}
-                                        activeWordIndex={localActiveWordIndex}
+                                        activeWordIndex={state.activeWordIndex}
+                                        wordOffset={state.wordOffset}
                                         phase={state.phase}
                                         inputRef={inputRef}
                                         onKeyDown={handleKeyDown}
@@ -272,6 +271,11 @@ export function TypingTestApp() {
                                     <div className="typing-hint-row">
                                         <p className="typing-shortcuts">
                                             <span>
+                                                <kbd>space</kbd> locks typed
+                                                word
+                                            </span>
+                                            <i aria-hidden="true">•</i>
+                                            <span>
                                                 <kbd>tab</kbd> to navigate
                                             </span>
                                             <i aria-hidden="true">•</i>
@@ -280,7 +284,8 @@ export function TypingTestApp() {
                                             </span>
                                             <i aria-hidden="true">•</i>
                                             <span>
-                                                <kbd>backspace</kbd> to correct
+                                                <kbd>backspace</kbd> edits
+                                                current word only
                                             </span>
                                         </p>
                                         {state.phase === 'running' &&

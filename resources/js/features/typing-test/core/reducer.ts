@@ -345,40 +345,17 @@ const commitWord = (state: TypingTestState, now: number): TypingTestState => {
 const eraseCharacter = (state: TypingTestState): TypingTestState => {
     const active = getActiveAttempt(state);
 
-    if (active === null) {
+    if (active === null || active.typed.length === 0) {
         return state;
     }
 
     const localActiveIndex = getLocalActiveIndex(state);
 
-    if (active.typed.length > 0) {
-        return {
-            ...state,
-            attempts: replaceAttempt(state.attempts, localActiveIndex, {
-                ...active,
-                typed: active.typed.slice(0, -1),
-            }),
-        };
-    }
-
-    if (localActiveIndex <= 0) {
-        return state;
-    }
-
-    const previousLocalIndex = localActiveIndex - 1;
-    const previous = state.attempts[previousLocalIndex];
-
-    if (previous === undefined || previous.typed.length === 0) {
-        return state;
-    }
-
     return {
         ...state,
-        activeWordIndex: state.activeWordIndex - 1,
-        attempts: replaceAttempt(state.attempts, previousLocalIndex, {
-            ...previous,
-            typed: previous.typed.slice(0, -1),
-            committed: false,
+        attempts: replaceAttempt(state.attempts, localActiveIndex, {
+            ...active,
+            typed: active.typed.slice(0, -1),
         }),
     };
 };

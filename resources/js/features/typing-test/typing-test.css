@@ -435,21 +435,54 @@
     text-align: left;
 }
 
+.typing-viewport {
+    width: min(100%, 52ch);
+    height: 4.86em;
+    overflow: hidden;
+    margin: 0 auto;
+    color: var(--tt-muted);
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: clamp(1.55rem, 2.6vw, 2.25rem);
+    font-variant-ligatures: none;
+    font-weight: 500;
+    letter-spacing: 0.012em;
+    line-height: 1.62;
+    text-align: left;
+}
+
+.typing-viewport .typing-words {
+    position: relative;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    color: inherit;
+    font: inherit;
+    font-variant-ligatures: inherit;
+    letter-spacing: inherit;
+    line-height: inherit;
+    overflow-wrap: normal;
+    text-align: inherit;
+}
+
 .typing-word {
-    display: inline;
+    display: inline-block;
     border-radius: 0.22rem;
+    vertical-align: top;
     white-space: pre;
 }
 
-.typing-word + .typing-word::before {
-    color: var(--tt-muted);
-    content: ' ';
+.typing-gap {
+    display: inline-block;
+    width: 1ch;
+    color: transparent;
+    letter-spacing: 0;
+    vertical-align: top;
+    white-space: pre;
 }
 
 .typing-word--active {
     background: color-mix(in srgb, var(--tt-surface) 84%, transparent);
-    box-shadow: 0 0 0 0.22rem
-        color-mix(in srgb, var(--tt-surface) 84%, transparent);
 }
 
 .typing-char {
@@ -1238,9 +1271,7 @@
 }
 
 .typing-surface:focus-within .typing-word--active {
-    box-shadow:
-        0 0 0 0.2rem color-mix(in srgb, var(--tt-surface) 72%, transparent),
-        0 0.15rem 0 var(--tt-caret);
+    box-shadow: 0 0.15rem 0 var(--tt-caret);
 }
 
 .typing-words {
@@ -1252,10 +1283,26 @@
     line-height: 1.7;
 }
 
+.typing-viewport {
+    width: min(100%, 67ch);
+    height: 5.1em;
+    color: var(--tt-muted);
+    font-size: clamp(1.25rem, 1.66vw, 1.7rem);
+    font-weight: 500;
+    letter-spacing: 0.055em;
+    line-height: 1.7;
+}
+
+.typing-viewport .typing-words {
+    max-width: none;
+    font-size: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+    line-height: inherit;
+}
+
 .typing-word--active {
     background: color-mix(in srgb, var(--tt-surface) 72%, transparent);
-    box-shadow: 0 0 0 0.2rem
-        color-mix(in srgb, var(--tt-surface) 72%, transparent);
 }
 
 .virtual-keyboard {
@@ -1306,6 +1353,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-wrap: wrap;
     gap: 0.65rem;
 }
 
@@ -1598,7 +1646,7 @@
         font-size: 0.67rem;
     }
 
-    .typing-words {
+    .typing-viewport {
         max-width: 61ch;
     }
 
@@ -1673,7 +1721,8 @@
         padding-block: 0.35rem;
     }
 
-    .typing-words {
+    .typing-viewport {
+        height: 4.65em;
         font-size: clamp(1.1rem, 1.65vw, 1.4rem);
         line-height: 1.55;
     }

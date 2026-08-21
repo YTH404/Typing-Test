@@ -141,20 +141,26 @@ describe('typing metrics', () => {
         });
     });
 
-    it('removes a reopened word separator from final WPM but not raw history', () => {
+    it('keeps a committed separator in final WPM after boundary Backspace', () => {
         let state = createInitialState(timeless, 106);
         const target = getActiveAttempt(state)!.target;
 
         state = typeText(state, target);
         state = key(state, KEYBOARD_TOKENS.space);
-        state = key(state, KEYBOARD_TOKENS.backspace);
+
+        for (let press = 0; press < 5; press += 1) {
+            state = key(state, KEYBOARD_TOKENS.backspace, press + 1);
+        }
+
         state = stop(state, 60_000);
 
         const result = getMetrics(state);
+        const correct = target.length + 1;
 
-        expect(result.correct).toBe(target.length - 1);
-        expect(result.completedWords).toBe(0);
-        expect(result.rawWpm).toBe(Math.round((target.length + 1) / 5));
+        expect(result.correct).toBe(correct);
+        expect(result.completedWords).toBe(1);
+        expect(result.rawWpm).toBe(Math.round(correct / 5));
+        expect(result.accuracy).toBe(100);
     });
 
     it('uses every historical printable insert for raw speed, including corrected input', () => {
