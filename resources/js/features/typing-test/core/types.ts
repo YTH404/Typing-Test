@@ -1,5 +1,9 @@
 export type KeyboardLayout = 'qwerty' | 'colemak';
 
+export type TypingLanguage = 'english' | 'indonesian';
+
+export type TypingDifficulty = 'easy' | 'hard';
+
 export type TestPhase = 'ready' | 'running' | 'finished';
 
 export type TimedDuration = 15 | 30 | 60 | 120;
@@ -9,6 +13,8 @@ export type TestMode =
 
 export type TestSettings = {
     layout: KeyboardLayout;
+    language: TypingLanguage;
+    difficulty: TypingDifficulty;
     punctuation: boolean;
     capitals: boolean;
     mode: TestMode;
@@ -85,6 +91,7 @@ export type KeyboardEventLike = {
 };
 
 export type WordGeneratorState = {
+    profileKey: string | null;
     randomState: number;
     bag: readonly string[];
     bagIndex: number;

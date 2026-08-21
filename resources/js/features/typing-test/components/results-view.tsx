@@ -25,6 +25,18 @@ const formatDuration = (elapsedMs: number) => {
         : `${seconds}s`;
 };
 
+const formatSettings = (settings: TestSettings): string =>
+    [
+        settings.language === 'english' ? 'English' : 'Indonesia',
+        settings.difficulty === 'easy' ? 'Easy' : 'Hard',
+        settings.layout === 'qwerty' ? 'QWERTY' : 'Colemak',
+        settings.mode.kind === 'timed'
+            ? `${settings.mode.durationSeconds}s`
+            : 'Timeless',
+        settings.punctuation ? 'Punctuation' : 'No punctuation',
+        settings.capitals ? 'Capitals' : 'Lowercase',
+    ].join(' · ');
+
 const getChartSamples = (
     samples: readonly MetricSample[],
     result: TestResult,
@@ -177,6 +189,7 @@ function ResultChart({
 export function ResultsView({
     result,
     samples,
+    settings,
     sessions,
     onTryAgain,
     onNewTest,
@@ -185,6 +198,7 @@ export function ResultsView({
         <section className="results-view" aria-labelledby="results-heading">
             <div className="results-title">
                 <h2 id="results-heading">Test complete</h2>
+                <p>{formatSettings(settings)}</p>
             </div>
 
             <div className="score-hero">
@@ -255,6 +269,8 @@ export function ResultsView({
                                 <strong>{session.result.wpm}</strong> WPM ·{' '}
                                 {session.result.accuracy.toFixed(0)}% ·{' '}
                                 {Math.round(session.result.elapsedMs / 1_000)}s
+                                {' — '}
+                                {formatSettings(session.settings)}
                             </li>
                         ))}
                     </ol>

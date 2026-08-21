@@ -1,10 +1,21 @@
 export {
+    WORD_BANKS,
+    getTypingDifficultyScore,
+    getWordPool,
+} from './difficulty';
+export {
     DEFAULT_SEED,
     createWordGeneratorState,
     generateWordBatch,
     generateWords,
 } from './generator';
-export { PHYSICAL_LAYOUTS, mapPhysicalKeyboardEvent } from './keyboard';
+export {
+    PHYSICAL_KEY_ERGONOMICS,
+    PHYSICAL_LAYOUTS,
+    mapPhysicalKeyboardEvent,
+    type PhysicalKeyErgonomics,
+} from './keyboard';
+export { LIVE_WPM_WINDOW_MS, getLiveWpm } from './live-wpm';
 export {
     getActiveAttempt,
     getAttemptWindow,
@@ -40,8 +51,11 @@ export {
     type TestSettings,
     type TimedDuration,
     type TypingAction,
+    type TypingDifficulty,
+    type TypingLanguage,
     type TypingTestState,
     type WordAttempt,
     type WordGeneratorState,
 } from './types';
-export { COMMON_WORDS } from './words';
+export { COMMON_WORDS, ENGLISH_WORDS } from './words';
+export { INDONESIAN_WORDS } from './words-id';

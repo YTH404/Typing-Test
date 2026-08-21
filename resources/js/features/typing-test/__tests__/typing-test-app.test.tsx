@@ -6,11 +6,25 @@ import { TypingTestApp } from '@/features/typing-test/typing-test-app';
 
 let currentNow = 1_000;
 let desktopMatches = true;
-let animationFrames: FrameRequestCallback[] = [];
+let desktopMediaChangeListeners = new Set<
+    (event: MediaQueryListEvent) => void
+>();
+let nextAnimationFrameId = 0;
+let animationFrames = new Map<number, FrameRequestCallback>();
+
+const dispatchDesktopMediaChange = (matches: boolean) => {
+    desktopMatches = matches;
+    const event = {
+        matches,
+        media: '(min-width: 900px)',
+    } as MediaQueryListEvent;
+
+    desktopMediaChangeListeners.forEach((listener) => listener(event));
+};
 
 const flushAnimationFrames = () => {
-    const queuedFrames = animationFrames;
-    animationFrames = [];
+    const queuedFrames = [...animationFrames.values()];
+    animationFrames.clear();
     queuedFrames.forEach((callback) => callback(currentNow));
 };
 
@@ -32,6 +46,15 @@ const getApp = (container: HTMLElement): HTMLElement => {
 
 const getTypingInput = () =>
     screen.getByRole('textbox', { name: 'Typing input' });
+
+const getMetricValue = (name: string): HTMLElement => {
+    const label = screen.getByText(name, { selector: '.metric dt' });
+    const value = label.closest('.metric')?.querySelector<HTMLElement>('dd');
+
+    expect(value).not.toBeNull();
+
+    return value!;
+};
 
 const getPassageWord = (index: number): HTMLElement => {
     const word = screen
@@ -84,35 +107,69 @@ const finishTimelessTest = () => {
 beforeEach(() => {
     currentNow = 1_000;
     desktopMatches = true;
-    animationFrames = [];
+    desktopMediaChangeListeners = new Set();
+    nextAnimationFrameId = 0;
+    animationFrames = new Map();
     vi.useFakeTimers();
 
     vi.stubGlobal(
         'matchMedia',
-        vi.fn(
-            (query: string) =>
-                ({
-                    matches:
-                        query === '(min-width: 900px)' ? desktopMatches : false,
-                    media: query,
-                    onchange: null,
-                    addListener: vi.fn(),
-                    removeListener: vi.fn(),
-                    addEventListener: vi.fn(),
-                    removeEventListener: vi.fn(),
-                    dispatchEvent: vi.fn(() => true),
-                }) as MediaQueryList,
-        ),
+        vi.fn((query: string) => {
+            const isDesktopQuery = query === '(min-width: 900px)';
+
+            return {
+                get matches() {
+                    return isDesktopQuery ? desktopMatches : false;
+                },
+                media: query,
+                onchange: null,
+                addListener: vi.fn(),
+                removeListener: vi.fn(),
+                addEventListener: vi.fn(
+                    (
+                        type: string,
+                        listener: EventListenerOrEventListenerObject,
+                    ) => {
+                        if (isDesktopQuery && type === 'change') {
+                            desktopMediaChangeListeners.add(
+                                listener as unknown as (
+                                    event: MediaQueryListEvent,
+                                ) => void,
+                            );
+                        }
+                    },
+                ),
+                removeEventListener: vi.fn(
+                    (
+                        type: string,
+                        listener: EventListenerOrEventListenerObject,
+                    ) => {
+                        if (isDesktopQuery && type === 'change') {
+                            desktopMediaChangeListeners.delete(
+                                listener as unknown as (
+                                    event: MediaQueryListEvent,
+                                ) => void,
+                            );
+                        }
+                    },
+                ),
+                dispatchEvent: vi.fn(() => true),
+            } as MediaQueryList;
+        }),
     );
     vi.stubGlobal(
         'requestAnimationFrame',
         vi.fn((callback: FrameRequestCallback) => {
-            animationFrames.push(callback);
+            nextAnimationFrameId += 1;
+            animationFrames.set(nextAnimationFrameId, callback);
 
-            return animationFrames.length;
+            return nextAnimationFrameId;
         }),
     );
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    vi.stubGlobal(
+        'cancelAnimationFrame',
+        vi.fn((frameId: number) => animationFrames.delete(frameId)),
+    );
     vi.spyOn(performance, 'now').mockImplementation(() => currentNow);
 });
 
@@ -126,6 +183,12 @@ describe('TypingTestApp', () => {
         const { container } = renderApp();
 
         expect(getApp(container)).toHaveAttribute('data-phase', 'ready');
+        expect(screen.getByRole('radio', { name: 'English' })).toBeChecked();
+        expect(
+            screen.getByRole('radio', { name: 'Indonesia' }),
+        ).not.toBeChecked();
+        expect(screen.getByRole('radio', { name: 'Easy' })).toBeChecked();
+        expect(screen.getByRole('radio', { name: 'Hard' })).not.toBeChecked();
         expect(screen.getByRole('radio', { name: 'QWERTY' })).toBeChecked();
         expect(
             screen.getByRole('radio', { name: 'Colemak' }),
@@ -144,7 +207,34 @@ describe('TypingTestApp', () => {
         expect(
             screen.getByText('60', { selector: '.metric dd' }),
         ).toBeInTheDocument();
+        expect(getMetricValue('Live WPM')).toHaveTextContent('0');
+        expect(screen.getByRole('group', { name: 'Language' })).toBeVisible();
+        expect(screen.getByRole('group', { name: 'Difficulty' })).toBeVisible();
+        expect(
+            screen.getByRole('group', { name: 'Keyboard layout' }),
+        ).toBeVisible();
+        expect(screen.getByRole('group', { name: 'Test mode' })).toBeVisible();
+        expect(screen.getByRole('group', { name: 'Duration' })).toBeVisible();
+        expect(
+            screen.getByRole('group', { name: 'Content options' }),
+        ).toBeVisible();
         expect(getTypingInput()).toHaveFocus();
+    });
+
+    it('switches language and difficulty independently', () => {
+        renderApp();
+        const initialTarget = getPassageWord(0).textContent;
+
+        fireEvent.click(screen.getByRole('radio', { name: 'Indonesia' }));
+
+        expect(screen.getByRole('radio', { name: 'Indonesia' })).toBeChecked();
+        expect(screen.getByRole('radio', { name: 'Easy' })).toBeChecked();
+        expect(getPassageWord(0).textContent).not.toBe(initialTarget);
+
+        fireEvent.click(screen.getByRole('radio', { name: 'Hard' }));
+
+        expect(screen.getByRole('radio', { name: 'Indonesia' })).toBeChecked();
+        expect(screen.getByRole('radio', { name: 'Hard' })).toBeChecked();
     });
 
     it('switches layouts and updates labels at the same physical key positions', () => {
@@ -196,13 +286,113 @@ describe('TypingTestApp', () => {
 
         expect(getApp(container)).toHaveAttribute('data-phase', 'running');
         expect(screen.getByText('Locked')).toBeInTheDocument();
+        expect(screen.getByRole('radio', { name: 'Indonesia' })).toBeDisabled();
+        expect(screen.getByRole('radio', { name: 'Hard' })).toBeDisabled();
         expect(screen.getByRole('radio', { name: 'Colemak' })).toBeDisabled();
         expect(screen.getByRole('radio', { name: 'Timeless' })).toBeDisabled();
-        expect(punctuation).toHaveAttribute('aria-disabled', 'true');
+        expect(punctuation).toBeDisabled();
+        expect(
+            screen.getByRole('button', { name: 'Restart test' }),
+        ).toBeEnabled();
 
         fireEvent.click(punctuation);
 
         expect(punctuation).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('returns pointer-operated settings to typing focus after one coalesced frame', () => {
+        renderApp();
+        const input = getTypingInput();
+        const indonesia = screen.getByRole('radio', { name: 'Indonesia' });
+        const focusSpy = vi.spyOn(input, 'focus');
+
+        indonesia.focus();
+        fireEvent.pointerUp(indonesia, {
+            button: 0,
+            isPrimary: true,
+            pointerId: 1,
+        });
+        fireEvent.click(indonesia);
+        fireEvent.pointerUp(indonesia, {
+            button: 0,
+            isPrimary: true,
+            pointerId: 1,
+        });
+
+        expect(indonesia).toHaveFocus();
+        expect(animationFrames.size).toBe(1);
+        expect(cancelAnimationFrame).toHaveBeenCalledTimes(1);
+
+        act(flushAnimationFrames);
+
+        expect(input).toHaveFocus();
+        expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true });
+        expect(indonesia).toBeChecked();
+    });
+
+    it('retains keyboard focus on settings controls', () => {
+        renderApp();
+        const hard = screen.getByRole('radio', { name: 'Hard' });
+
+        hard.focus();
+        fireEvent.click(hard, { detail: 0 });
+        act(flushAnimationFrames);
+
+        expect(hard).toBeChecked();
+        expect(hard).toHaveFocus();
+    });
+
+    it('ignores blank rail padding and controls disabled by their fieldset', () => {
+        const { container } = renderApp();
+        const timeless = screen.getByRole('radio', { name: 'Timeless' });
+
+        timeless.focus();
+        fireEvent.click(timeless, { detail: 0 });
+
+        const duration = screen.getByRole('radio', { name: '15' });
+        const settingsForm =
+            container.querySelector<HTMLElement>('.settings-form');
+
+        expect(duration).toBeDisabled();
+        expect(settingsForm).not.toBeNull();
+
+        fireEvent.pointerUp(settingsForm!, {
+            button: 0,
+            isPrimary: true,
+            pointerId: 4,
+        });
+        fireEvent.pointerUp(duration, {
+            button: 0,
+            isPrimary: true,
+            pointerId: 5,
+        });
+
+        expect(animationFrames.size).toBe(0);
+        expect(timeless).toHaveFocus();
+    });
+
+    it('does not return focus from locked settings while typing', () => {
+        const { container } = renderApp();
+        const input = getTypingInput();
+
+        fireEvent.keyDown(input, { code: 'KeyA', key: 'a' });
+        expect(getApp(container)).toHaveAttribute('data-phase', 'running');
+
+        const punctuation = screen.getByRole('button', {
+            name: 'Punctuation',
+        });
+        expect(punctuation).toBeDisabled();
+        expect(input).toHaveFocus();
+        const frameCount = animationFrames.size;
+        fireEvent.pointerUp(punctuation, {
+            button: 0,
+            isPrimary: true,
+            pointerId: 2,
+        });
+        fireEvent.click(punctuation);
+
+        expect(animationFrames.size).toBe(frameCount);
+        expect(input).toHaveFocus();
     });
 
     it('returns focus to the typing input when the passage is clicked', () => {
@@ -215,9 +405,42 @@ describe('TypingTestApp', () => {
         punctuation.focus();
         expect(punctuation).toHaveFocus();
 
-        fireEvent.mouseDown(screen.getByTestId('typing-passage'));
+        fireEvent.pointerDown(screen.getByTestId('typing-passage'), {
+            button: 0,
+            isPrimary: true,
+            pointerId: 3,
+        });
 
         expect(input).toHaveFocus();
+    });
+
+    it('blurs and cancels pending typing focus when desktop support is lost', () => {
+        const { unmount } = renderApp();
+        const input = getTypingInput();
+        const english = screen.getByRole('radio', { name: 'English' });
+
+        expect(input).toHaveFocus();
+        expect(desktopMediaChangeListeners.size).toBe(1);
+
+        fireEvent.pointerUp(english, {
+            button: 0,
+            isPrimary: true,
+            pointerId: 6,
+        });
+        expect(animationFrames.size).toBe(1);
+
+        act(() => dispatchDesktopMediaChange(false));
+
+        expect(animationFrames.size).toBe(0);
+        expect(input).not.toHaveFocus();
+
+        act(() => dispatchDesktopMediaChange(true));
+        act(flushAnimationFrames);
+
+        expect(input).not.toHaveFocus();
+
+        unmount();
+        expect(desktopMediaChangeListeners.size).toBe(0);
     });
 
     it('keeps a Space-committed word locked through empty spaces and Backspace', () => {
@@ -263,6 +486,29 @@ describe('TypingTestApp', () => {
         expect(getPassageWord(0)).toHaveTextContent(firstTarget);
         expect(getPassageWord(1)).toBe(secondWord);
         expect(getPassageWord(1)).toHaveAttribute('data-active', 'true');
+    });
+
+    it('updates live WPM from the latest completed whole-second window', () => {
+        renderApp();
+        const firstCharacter = getPassageWord(0).textContent?.[0];
+
+        expect(firstCharacter).toBeDefined();
+        typeQwertyText(firstCharacter!);
+        expect(getMetricValue('Live WPM')).toHaveTextContent('0');
+
+        act(() => {
+            currentNow = 2_000;
+            vi.advanceTimersByTime(100);
+        });
+
+        expect(getMetricValue('Live WPM')).toHaveTextContent('12');
+
+        act(() => {
+            currentNow = 2_999;
+            vi.advanceTimersByTime(100);
+        });
+
+        expect(getMetricValue('Live WPM')).toHaveTextContent('12');
     });
 
     it('ignores shortcuts, composition, repeats, and paste while ready', () => {
@@ -329,6 +575,9 @@ describe('TypingTestApp', () => {
     it('stops a timeless test, renders results, and announces completion', () => {
         const { container } = renderApp();
 
+        fireEvent.click(screen.getByRole('radio', { name: 'Indonesia' }));
+        fireEvent.click(screen.getByRole('radio', { name: 'Hard' }));
+
         finishTimelessTest();
 
         expect(getApp(container)).toHaveAttribute('data-phase', 'finished');
@@ -347,6 +596,37 @@ describe('TypingTestApp', () => {
         expect(
             screen.getByRole('button', { name: 'New test' }),
         ).toBeInTheDocument();
+        expect(
+            screen.getAllByText(
+                /Indonesia · Hard · QWERTY · Timeless · No punctuation · Lowercase/,
+            ),
+        ).toHaveLength(2);
+    });
+
+    it('preserves each completed session settings snapshot', () => {
+        const { container } = renderApp();
+
+        fireEvent.click(screen.getByRole('radio', { name: 'Indonesia' }));
+        fireEvent.click(screen.getByRole('radio', { name: 'Hard' }));
+        fireEvent.click(screen.getByRole('radio', { name: 'Colemak' }));
+        finishTimelessTest();
+
+        fireEvent.click(screen.getByRole('button', { name: 'New test' }));
+        act(flushAnimationFrames);
+        fireEvent.click(screen.getByRole('radio', { name: 'English' }));
+        fireEvent.click(screen.getByRole('radio', { name: 'Easy' }));
+        fireEvent.click(screen.getByRole('radio', { name: 'QWERTY' }));
+        finishTimelessTest();
+
+        const sessionItems = container.querySelectorAll('.session-list li');
+
+        expect(sessionItems).toHaveLength(2);
+        expect(sessionItems[0]).toHaveTextContent(
+            'Indonesia · Hard · Colemak · Timeless · No punctuation · Lowercase',
+        );
+        expect(sessionItems[1]).toHaveTextContent(
+            'English · Easy · QWERTY · Timeless · No punctuation · Lowercase',
+        );
     });
 
     it('tries the same settings again and restores typing focus', () => {
@@ -370,9 +650,26 @@ describe('TypingTestApp', () => {
         act(flushAnimationFrames);
 
         expect(getApp(container)).toHaveAttribute('data-phase', 'ready');
-        expect(screen.getByRole('radio', { name: 'QWERTY' })).toHaveFocus();
+        expect(screen.getByRole('radio', { name: 'English' })).toHaveFocus();
         expect(screen.getByRole('radio', { name: 'Timeless' })).toBeChecked();
         expect(screen.getByRole('status')).toBeEmptyDOMElement();
+    });
+
+    it('cancels New test settings focus when desktop support is lost', () => {
+        renderApp();
+
+        finishTimelessTest();
+        fireEvent.click(screen.getByRole('button', { name: 'New test' }));
+
+        expect(animationFrames.size).toBe(1);
+
+        act(() => dispatchDesktopMediaChange(false));
+        act(flushAnimationFrames);
+
+        expect(animationFrames.size).toBe(0);
+        expect(
+            screen.getByRole('radio', { name: 'English' }),
+        ).not.toHaveFocus();
     });
 
     it('keeps the physical-keyboard desktop requirement in the document', () => {

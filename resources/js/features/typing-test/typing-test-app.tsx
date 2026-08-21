@@ -19,6 +19,7 @@ import {
     KEYBOARD_TOKENS,
     createInitialState,
     getElapsedMs,
+    getLiveWpm,
     getMetrics,
     getRemainingMs,
     mapPhysicalKeyboardEvent,
@@ -43,12 +44,17 @@ export function TypingTestApp() {
     const [completionAnnouncement, setCompletionAnnouncement] = useState('');
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const activeKeyTimerRef = useRef<number | null>(null);
+    const focusFrameRef = useRef<number | null>(null);
     const recordedFinishRef = useRef<number | null>(null);
     const sessionIdRef = useRef(0);
 
     const effectiveNow = state.finishedAt ?? clockNow;
     const metrics = useMemo(
         () => getMetrics(state, effectiveNow),
+        [effectiveNow, state],
+    );
+    const liveWpm = useMemo(
+        () => getLiveWpm(state, effectiveNow),
         [effectiveNow, state],
     );
     const remainingMs = getRemainingMs(state, effectiveNow);
@@ -62,12 +68,43 @@ export function TypingTestApp() {
             return;
         }
 
-        window.requestAnimationFrame(() => inputRef.current?.focus());
+        if (focusFrameRef.current !== null) {
+            window.cancelAnimationFrame(focusFrameRef.current);
+        }
+
+        focusFrameRef.current = window.requestAnimationFrame(() => {
+            focusFrameRef.current = null;
+
+            if (canUseDesktopTrainer()) {
+                inputRef.current?.focus({ preventScroll: true });
+            }
+        });
     }, []);
 
     useEffect(() => {
         focusTypingInput();
     }, [focusTypingInput]);
+
+    useEffect(() => {
+        const desktopQuery = window.matchMedia('(min-width: 900px)');
+        const handleDesktopChange = (event: MediaQueryListEvent) => {
+            if (event.matches) {
+                return;
+            }
+
+            if (focusFrameRef.current !== null) {
+                window.cancelAnimationFrame(focusFrameRef.current);
+                focusFrameRef.current = null;
+            }
+
+            inputRef.current?.blur();
+        };
+
+        desktopQuery.addEventListener('change', handleDesktopChange);
+
+        return () =>
+            desktopQuery.removeEventListener('change', handleDesktopChange);
+    }, []);
 
     useEffect(() => {
         if (state.phase !== 'running') {
@@ -114,6 +151,10 @@ export function TypingTestApp() {
         () => () => {
             if (activeKeyTimerRef.current !== null) {
                 window.clearTimeout(activeKeyTimerRef.current);
+            }
+
+            if (focusFrameRef.current !== null) {
+                window.cancelAnimationFrame(focusFrameRef.current);
             }
         },
         [],
@@ -197,10 +238,20 @@ export function TypingTestApp() {
         setClockNow(0);
         dispatch({ type: 'restart' });
 
-        window.requestAnimationFrame(() => {
+        if (focusFrameRef.current !== null) {
+            window.cancelAnimationFrame(focusFrameRef.current);
+        }
+
+        focusFrameRef.current = window.requestAnimationFrame(() => {
+            focusFrameRef.current = null;
+
+            if (!canUseDesktopTrainer()) {
+                return;
+            }
+
             document
                 .querySelector<HTMLInputElement>(
-                    'input[name="keyboard-layout"]',
+                    'input[name="typing-language"]',
                 )
                 ?.focus();
         });
@@ -225,6 +276,7 @@ export function TypingTestApp() {
                             phase={state.phase}
                             onChange={handleSettingsChange}
                             onRestart={restart}
+                            onRequestTypingFocus={focusTypingInput}
                         />
 
                         <div className="test-region">
@@ -248,7 +300,7 @@ export function TypingTestApp() {
                                     <div className="live-test-header">
                                         <LiveMetrics
                                             timeLabel={timeLabel}
-                                            wpm={metrics.wpm}
+                                            liveWpm={liveWpm}
                                             accuracy={metrics.accuracy}
                                         />
                                     </div>

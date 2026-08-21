@@ -8,6 +8,14 @@ import type {
 
 type KeyPair = readonly [normal: string, shifted: string];
 
+export type PhysicalKeyErgonomics = {
+    row: 'top' | 'home' | 'bottom';
+    rowIndex: 0 | 1 | 2;
+    hand: 'left' | 'right';
+    finger: 'index' | 'middle' | 'ring' | 'pinky';
+    innerIndexColumn: boolean;
+};
+
 const ANSI_SYMBOL_KEYS: Readonly<Record<string, KeyPair>> = {
     Backquote: ['`', '~'],
     Digit1: ['1', '!'],
@@ -89,6 +97,200 @@ const COLEMAK_KEYS: Readonly<Record<string, string>> = {
     KeyB: 'b',
     KeyN: 'k',
     KeyM: 'm',
+};
+
+export const PHYSICAL_KEY_ERGONOMICS: Readonly<
+    Record<string, PhysicalKeyErgonomics>
+> = {
+    KeyQ: {
+        row: 'top',
+        rowIndex: 0,
+        hand: 'left',
+        finger: 'pinky',
+        innerIndexColumn: false,
+    },
+    KeyW: {
+        row: 'top',
+        rowIndex: 0,
+        hand: 'left',
+        finger: 'ring',
+        innerIndexColumn: false,
+    },
+    KeyE: {
+        row: 'top',
+        rowIndex: 0,
+        hand: 'left',
+        finger: 'middle',
+        innerIndexColumn: false,
+    },
+    KeyR: {
+        row: 'top',
+        rowIndex: 0,
+        hand: 'left',
+        finger: 'index',
+        innerIndexColumn: false,
+    },
+    KeyT: {
+        row: 'top',
+        rowIndex: 0,
+        hand: 'left',
+        finger: 'index',
+        innerIndexColumn: true,
+    },
+    KeyY: {
+        row: 'top',
+        rowIndex: 0,
+        hand: 'right',
+        finger: 'index',
+        innerIndexColumn: true,
+    },
+    KeyU: {
+        row: 'top',
+        rowIndex: 0,
+        hand: 'right',
+        finger: 'index',
+        innerIndexColumn: false,
+    },
+    KeyI: {
+        row: 'top',
+        rowIndex: 0,
+        hand: 'right',
+        finger: 'middle',
+        innerIndexColumn: false,
+    },
+    KeyO: {
+        row: 'top',
+        rowIndex: 0,
+        hand: 'right',
+        finger: 'ring',
+        innerIndexColumn: false,
+    },
+    KeyP: {
+        row: 'top',
+        rowIndex: 0,
+        hand: 'right',
+        finger: 'pinky',
+        innerIndexColumn: false,
+    },
+    KeyA: {
+        row: 'home',
+        rowIndex: 1,
+        hand: 'left',
+        finger: 'pinky',
+        innerIndexColumn: false,
+    },
+    KeyS: {
+        row: 'home',
+        rowIndex: 1,
+        hand: 'left',
+        finger: 'ring',
+        innerIndexColumn: false,
+    },
+    KeyD: {
+        row: 'home',
+        rowIndex: 1,
+        hand: 'left',
+        finger: 'middle',
+        innerIndexColumn: false,
+    },
+    KeyF: {
+        row: 'home',
+        rowIndex: 1,
+        hand: 'left',
+        finger: 'index',
+        innerIndexColumn: false,
+    },
+    KeyG: {
+        row: 'home',
+        rowIndex: 1,
+        hand: 'left',
+        finger: 'index',
+        innerIndexColumn: true,
+    },
+    KeyH: {
+        row: 'home',
+        rowIndex: 1,
+        hand: 'right',
+        finger: 'index',
+        innerIndexColumn: true,
+    },
+    KeyJ: {
+        row: 'home',
+        rowIndex: 1,
+        hand: 'right',
+        finger: 'index',
+        innerIndexColumn: false,
+    },
+    KeyK: {
+        row: 'home',
+        rowIndex: 1,
+        hand: 'right',
+        finger: 'middle',
+        innerIndexColumn: false,
+    },
+    KeyL: {
+        row: 'home',
+        rowIndex: 1,
+        hand: 'right',
+        finger: 'ring',
+        innerIndexColumn: false,
+    },
+    Semicolon: {
+        row: 'home',
+        rowIndex: 1,
+        hand: 'right',
+        finger: 'pinky',
+        innerIndexColumn: false,
+    },
+    KeyZ: {
+        row: 'bottom',
+        rowIndex: 2,
+        hand: 'left',
+        finger: 'pinky',
+        innerIndexColumn: false,
+    },
+    KeyX: {
+        row: 'bottom',
+        rowIndex: 2,
+        hand: 'left',
+        finger: 'ring',
+        innerIndexColumn: false,
+    },
+    KeyC: {
+        row: 'bottom',
+        rowIndex: 2,
+        hand: 'left',
+        finger: 'middle',
+        innerIndexColumn: false,
+    },
+    KeyV: {
+        row: 'bottom',
+        rowIndex: 2,
+        hand: 'left',
+        finger: 'index',
+        innerIndexColumn: false,
+    },
+    KeyB: {
+        row: 'bottom',
+        rowIndex: 2,
+        hand: 'left',
+        finger: 'index',
+        innerIndexColumn: true,
+    },
+    KeyN: {
+        row: 'bottom',
+        rowIndex: 2,
+        hand: 'right',
+        finger: 'index',
+        innerIndexColumn: true,
+    },
+    KeyM: {
+        row: 'bottom',
+        rowIndex: 2,
+        hand: 'right',
+        finger: 'index',
+        innerIndexColumn: false,
+    },
 };
 
 const NUMPAD_KEYS: Readonly<Record<string, string>> = {

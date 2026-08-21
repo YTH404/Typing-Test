@@ -6,5 +6,7 @@ export type {
     TestPhase,
     TestResult,
     TestSettings,
+    TypingDifficulty,
+    TypingLanguage,
     WordAttempt,
 } from './core';

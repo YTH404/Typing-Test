@@ -17,6 +17,8 @@ import type {
 
 export const DEFAULT_SETTINGS: TestSettings = {
     layout: 'qwerty',
+    language: 'english',
+    difficulty: 'easy',
     punctuation: false,
     capitals: false,
     mode: { kind: 'timed', durationSeconds: 60 },

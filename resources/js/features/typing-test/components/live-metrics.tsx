@@ -1,10 +1,14 @@
 type LiveMetricsProps = {
     timeLabel: string;
-    wpm: number;
+    liveWpm: number;
     accuracy: number;
 };
 
-export function LiveMetrics({ timeLabel, wpm, accuracy }: LiveMetricsProps) {
+export function LiveMetrics({
+    timeLabel,
+    liveWpm,
+    accuracy,
+}: LiveMetricsProps) {
     return (
         <dl className="live-metrics" aria-label="Current test metrics">
             <div className="metric metric--time">
@@ -12,8 +16,8 @@ export function LiveMetrics({ timeLabel, wpm, accuracy }: LiveMetricsProps) {
                 <dd>{timeLabel}</dd>
             </div>
             <div className="metric">
-                <dt>WPM</dt>
-                <dd>{wpm}</dd>
+                <dt>Live WPM</dt>
+                <dd>{liveWpm}</dd>
             </div>
             <div className="metric">
                 <dt>Accuracy</dt>

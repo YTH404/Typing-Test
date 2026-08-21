@@ -1,5 +1,5 @@
+import { getWordPool } from './difficulty';
 import type { TestSettings, WordGeneratorState } from './types';
-import { COMMON_WORDS } from './words';
 
 const DEFAULT_SEED = 0x6d2b79f5;
 
@@ -50,8 +50,9 @@ const randomInteger = (
 const shuffleWords = (
     randomState: number,
     previousWord: string | null,
+    words: readonly string[],
 ): { bag: readonly string[]; randomState: number } => {
-    const bag = [...COMMON_WORDS];
+    const bag = [...words];
     let state = randomState;
 
     for (let index = bag.length - 1; index > 0; index -= 1) {
@@ -104,6 +105,7 @@ const chooseTerminalMark = (
 
 export function createWordGeneratorState(seed: number): WordGeneratorState {
     return {
+        profileKey: null,
         randomState: normalizeSeed(seed),
         bag: [],
         bagIndex: 0,
@@ -147,15 +149,52 @@ const prepareSentence = (generator: WordGeneratorState): WordGeneratorState => {
     };
 };
 
+const getProfileKey = (settings: TestSettings): string =>
+    [
+        settings.language,
+        settings.difficulty,
+        settings.layout,
+        settings.punctuation ? 'punctuation' : 'plain',
+        settings.capitals ? 'capitals' : 'lowercase',
+    ].join(':');
+
+const bindProfile = (
+    generator: WordGeneratorState,
+    settings: TestSettings,
+): WordGeneratorState => {
+    const profileKey = getProfileKey(settings);
+
+    if (generator.profileKey === profileKey) {
+        return generator;
+    }
+
+    return {
+        ...generator,
+        profileKey,
+        bag: [],
+        bagIndex: 0,
+        previousWord: null,
+        sentenceLength: 0,
+        sentencePosition: 0,
+        internalPunctuationIndex: null,
+        internalPunctuationMark: null,
+    };
+};
+
 const takeWord = (
     generator: WordGeneratorState,
+    words: readonly string[],
 ): { word: string; generator: WordGeneratorState } => {
     let bag = generator.bag;
     let bagIndex = generator.bagIndex;
     let randomState = generator.randomState;
 
     if (bagIndex >= bag.length) {
-        const shuffled = shuffleWords(randomState, generator.previousWord);
+        const shuffled = shuffleWords(
+            randomState,
+            generator.previousWord,
+            words,
+        );
         bag = shuffled.bag;
         bagIndex = 0;
         randomState = shuffled.randomState;
@@ -185,14 +224,19 @@ export function generateWords(
     initialState: WordGeneratorState,
 ): GeneratedWords {
     const words: string[] = [];
-    let generator = initialState;
+    let generator = bindProfile(initialState, settings);
+    const pool = getWordPool(
+        settings.language,
+        settings.layout,
+        settings.difficulty,
+    );
 
     for (let index = 0; index < Math.max(0, Math.floor(count)); index += 1) {
         if (settings.punctuation && generator.sentenceLength === 0) {
             generator = prepareSentence(generator);
         }
 
-        const selected = takeWord(generator);
+        const selected = takeWord(generator, pool);
         let word = selected.word;
         generator = selected.generator;
 

@@ -1,4 +1,5 @@
 import { RotateCcw } from 'lucide-react';
+import type { PointerEvent } from 'react';
 
 import type {
     KeyboardLayout,
@@ -6,6 +7,8 @@ import type {
     TestPhase,
     TestSettings,
     TimedDuration,
+    TypingDifficulty,
+    TypingLanguage,
 } from '../core/types';
 
 type SettingsRailProps = {
@@ -13,6 +16,7 @@ type SettingsRailProps = {
     phase: TestPhase;
     onChange: (settings: TestSettings) => void;
     onRestart: () => void;
+    onRequestTypingFocus: () => void;
 };
 
 const durations: readonly TimedDuration[] = [15, 30, 60, 120];
@@ -22,12 +26,25 @@ export function SettingsRail({
     phase,
     onChange,
     onRestart,
+    onRequestTypingFocus,
 }: SettingsRailProps) {
     const locked = phase === 'running';
 
     const updateLayout = (layout: KeyboardLayout) => {
         if (!locked) {
             onChange({ ...settings, layout });
+        }
+    };
+
+    const updateLanguage = (language: TypingLanguage) => {
+        if (!locked) {
+            onChange({ ...settings, language });
+        }
+    };
+
+    const updateDifficulty = (difficulty: TypingDifficulty) => {
+        if (!locked) {
+            onChange({ ...settings, difficulty });
         }
     };
 
@@ -43,6 +60,30 @@ export function SettingsRail({
         }
     };
 
+    const returnPointerFocusToTyping = (
+        event: PointerEvent<HTMLDivElement>,
+    ) => {
+        if (locked || !event.isPrimary || event.button !== 0) {
+            return;
+        }
+
+        const target = event.target as HTMLElement;
+        const action = target.closest<HTMLElement>('button, input, label');
+        const control = action?.matches('label')
+            ? action.querySelector<HTMLInputElement>('input')
+            : action;
+
+        if (
+            control === null ||
+            control === undefined ||
+            control.matches(':disabled, [aria-disabled="true"]')
+        ) {
+            return;
+        }
+
+        onRequestTypingFocus();
+    };
+
     return (
         <aside className="settings-rail" aria-labelledby="settings-heading">
             <h2 id="settings-heading" className="screen-reader-only">
@@ -50,16 +91,84 @@ export function SettingsRail({
             </h2>
             {locked && <span className="screen-reader-only">Locked</span>}
 
-            <div className="settings-form">
-                <fieldset className="settings-group" disabled={locked}>
+            <div
+                className="settings-form"
+                onPointerUp={returnPointerFocusToTyping}
+            >
+                <fieldset
+                    className="settings-group settings-group--language"
+                    disabled={locked}
+                >
+                    <legend>Language</legend>
+                    <div className="settings-options">
+                        {(['english', 'indonesian'] as const).map(
+                            (language) => (
+                                <label
+                                    className="settings-radio-label"
+                                    htmlFor={`typing-language-${language}`}
+                                    key={language}
+                                >
+                                    <input
+                                        id={`typing-language-${language}`}
+                                        type="radio"
+                                        name="typing-language"
+                                        value={language}
+                                        checked={settings.language === language}
+                                        onChange={() =>
+                                            updateLanguage(language)
+                                        }
+                                    />
+                                    {language === 'english'
+                                        ? 'English'
+                                        : 'Indonesia'}
+                                </label>
+                            ),
+                        )}
+                    </div>
+                </fieldset>
+
+                <fieldset
+                    className="settings-group settings-group--difficulty"
+                    disabled={locked}
+                >
+                    <legend>Difficulty</legend>
+                    <div className="settings-options">
+                        {(['easy', 'hard'] as const).map((difficulty) => (
+                            <label
+                                className="settings-radio-label"
+                                htmlFor={`typing-difficulty-${difficulty}`}
+                                key={difficulty}
+                            >
+                                <input
+                                    id={`typing-difficulty-${difficulty}`}
+                                    type="radio"
+                                    name="typing-difficulty"
+                                    value={difficulty}
+                                    checked={settings.difficulty === difficulty}
+                                    onChange={() =>
+                                        updateDifficulty(difficulty)
+                                    }
+                                />
+                                {difficulty === 'easy' ? 'Easy' : 'Hard'}
+                            </label>
+                        ))}
+                    </div>
+                </fieldset>
+
+                <fieldset
+                    className="settings-group settings-group--layout"
+                    disabled={locked}
+                >
                     <legend>Keyboard layout</legend>
                     <div className="settings-options">
                         {(['qwerty', 'colemak'] as const).map((layout) => (
                             <label
                                 className="settings-radio-label"
+                                htmlFor={`keyboard-layout-${layout}`}
                                 key={layout}
                             >
                                 <input
+                                    id={`keyboard-layout-${layout}`}
                                     type="radio"
                                     name="keyboard-layout"
                                     value={layout}
@@ -72,11 +181,18 @@ export function SettingsRail({
                     </div>
                 </fieldset>
 
-                <fieldset className="settings-group" disabled={locked}>
+                <fieldset
+                    className="settings-group settings-group--mode"
+                    disabled={locked}
+                >
                     <legend>Test mode</legend>
                     <div className="settings-options">
-                        <label className="settings-radio-label">
+                        <label
+                            className="settings-radio-label"
+                            htmlFor="test-mode-timed"
+                        >
                             <input
+                                id="test-mode-timed"
                                 type="radio"
                                 name="test-mode"
                                 value="timed"
@@ -93,8 +209,12 @@ export function SettingsRail({
                             />
                             Timed
                         </label>
-                        <label className="settings-radio-label">
+                        <label
+                            className="settings-radio-label"
+                            htmlFor="test-mode-timeless"
+                        >
                             <input
+                                id="test-mode-timeless"
                                 type="radio"
                                 name="test-mode"
                                 value="timeless"
@@ -109,7 +229,7 @@ export function SettingsRail({
                 </fieldset>
 
                 <fieldset
-                    className="settings-group"
+                    className="settings-group settings-group--duration"
                     disabled={locked || settings.mode.kind === 'timeless'}
                 >
                     <legend>Duration</legend>
@@ -117,9 +237,11 @@ export function SettingsRail({
                         {durations.map((duration) => (
                             <label
                                 className="settings-radio-label"
+                                htmlFor={`test-duration-${duration}`}
                                 key={duration}
                             >
                                 <input
+                                    id={`test-duration-${duration}`}
                                     type="radio"
                                     name="test-duration"
                                     value={duration}
@@ -141,14 +263,23 @@ export function SettingsRail({
                     </div>
                 </fieldset>
 
-                <div className="settings-group">
-                    <span className="screen-reader-only">Content options</span>
+                <div
+                    className="settings-group settings-group--content"
+                    role="group"
+                    aria-labelledby="content-options-label"
+                >
+                    <span
+                        className="settings-group-label"
+                        id="content-options-label"
+                    >
+                        Content options
+                    </span>
                     <div className="settings-options settings-options--stacked">
                         <button
                             className="settings-toggle"
                             type="button"
                             aria-pressed={settings.punctuation}
-                            aria-disabled={locked}
+                            disabled={locked}
                             onClick={() => toggleSetting('punctuation')}
                         >
                             Punctuation
@@ -161,7 +292,7 @@ export function SettingsRail({
                             className="settings-toggle"
                             type="button"
                             aria-pressed={settings.capitals}
-                            aria-disabled={locked}
+                            disabled={locked}
                             onClick={() => toggleSetting('capitals')}
                         >
                             Capitals

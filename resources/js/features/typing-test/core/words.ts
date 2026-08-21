@@ -702,6 +702,9 @@ const COMMON_WORD_CANDIDATES = [
 
 // Keep a broad alphabetical source above, then take an even distribution from
 // the entire alphabet instead of truncating the list around one letter.
-export const COMMON_WORDS: readonly string[] = COMMON_WORD_CANDIDATES.filter(
+export const ENGLISH_WORDS: readonly string[] = COMMON_WORD_CANDIDATES.filter(
     (_, index) => index % 4 !== 0,
 );
+
+/** @deprecated Prefer ENGLISH_WORDS or WORD_BANKS for new code. */
+export const COMMON_WORDS = ENGLISH_WORDS;

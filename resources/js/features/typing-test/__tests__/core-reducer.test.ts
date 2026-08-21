@@ -11,6 +11,7 @@ import {
     getAttemptWindow,
     getMetrics,
     getRemainingMs,
+    getWordPool,
     isSettingsLocked,
     typingReducer,
 } from '@/features/typing-test/core';
@@ -55,9 +56,11 @@ const modeCases: readonly (readonly [string, TestSettings])[] = [
 ];
 
 describe('typing reducer', () => {
-    it('uses the agreed QWERTY 60-second defaults', () => {
+    it('uses the agreed English Easy QWERTY 60-second defaults', () => {
         expect(DEFAULT_SETTINGS).toEqual({
             layout: 'qwerty',
+            language: 'english',
+            difficulty: 'easy',
             punctuation: false,
             capitals: false,
             mode: { kind: 'timed', durationSeconds: 60 },
@@ -391,6 +394,8 @@ describe('typing reducer', () => {
     it('locks settings while running and applies them in ready or finished phases', () => {
         const changed: TestSettings = {
             layout: 'colemak',
+            language: 'indonesian',
+            difficulty: 'hard',
             punctuation: true,
             capitals: true,
             mode: { kind: 'timeless' },
@@ -404,6 +409,13 @@ describe('typing reducer', () => {
         });
         expect(state.settings).toEqual(changed);
         expect(state.seed).toBe(7);
+        expect(
+            state.attempts.every((attempt) =>
+                getWordPool('indonesian', 'colemak', 'hard').includes(
+                    attempt.target.replace(/[,:;.!?]$/, '').toLowerCase(),
+                ),
+            ),
+        ).toBe(true);
 
         state = key(state, character(getActiveAttempt(state)!.target[0]!), 0);
         expect(isSettingsLocked(state)).toBe(true);
